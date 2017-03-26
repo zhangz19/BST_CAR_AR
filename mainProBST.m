@@ -11,21 +11,40 @@
 % * Please contact the authors if there are any questions or implementation issues:
 % Zhen Zhang, zhangz19@galton.uchicago.edu.
 
+function [] = mainProBST()
+global X Y W
+
+%prepare your data with:
+% Y: NT*1 column vector with T blocks: each block Yt has observation for N locations, i.e. Y=[Y1',...YT']';
+% X: NT*p covariates with same setup as Y. No intercept (will be added later)
+% W: N by N adjacency matrix with binary value: 1 means adjacency
+load('yourData.mat')  % X, Y, W
+
+nmodel = 1; % 1=non-random; 2=spatial only, 3=temporal only, 4=full spatio-temporal
+for mcmcID = 1:3 % 3 MCMC runs
+    % save "out_*.mat" with matPara: parameter samples [x.beta', x.sigma2, x.tau2, x.phi, x.gamma] 
+    % and random effects Us, and devieance Es for DIC claculation
+    mainProBSTrun(Y, X, W, mcmcID, nmodel); 
+end
+end
+
 %% Main function for MCMC
-function [] = mainProBST(ID)
-global N T NT p pT W M X Y eta2 pis J0 L0 facMu indj betaprior J Q nonrandom nontemporal nonspatial
+function [matPara, Us,  Es] = mainProBSTrun(Y, X, W, ch, nmodel)
+global N T NT p pT M eta2 pis J0 L0 facMu indj betaprior J Q nonrandom nontemporal nonspatial
 global alphasig invbetasig alphatau invbetatau gap_gamma gap_phi gammas phis lgamma0 lphi0
-B = 16e3; burnin = 15e3;
+B = 16e3; burnin = 15e3;  % number of iterations and burn-in period for MCMC
 verbose = 0; simu = 0; simudata = 0;  incint = 1; intonly = 0;
 betaprior = 1; tranform = 1; computeDIC = 1;
-ch = str2double(num2str(ID));
+
+% for job partition in HPC if there are multiple runs
 ch0 = ch;
-nChain = 3; nmod = 4;
-nvar = ceil(ch/(nChain*nmod));
-ch = ch - (nvar-1)*nChain*nmod;
-nmodel = ceil(ch/nChain);
-ch = ch - (nmodel-1)*nChain;
-fprintf('nvar = %d, model = %d, chain = %d:\n', [nvar, nmodel, ch]) %partition jobs
+% nChain = 3; nmod = 4;
+% nvar = ceil(ch/(nChain*nmod));
+% ch = ch - (nvar-1)*nChain*nmod;
+% nmodel = ceil(ch/nChain);
+% ch = ch - (nmodel-1)*nChain;
+
+fprintf('model = %d, chain = %d:\n', [nmodel, ch]) %partition jobs
 switch nmodel
     case 1 % non-random
         nonspatial = 1; nontemporal = 1; nonrandom = 1;
@@ -37,17 +56,9 @@ switch nmodel
         nonspatial = 0; nontemporal = 0; nonrandom = 0;
 end
 
-load('Ya.mat')
-X = X(:,[1,2,3,5,10:12,18]); Y = Y(:,nvar); N = size(W,1);
-T = length(Y)/N; NT = N*T; p = size(X,2);
-Y = reshape(Y, [T,N]); Y = reshape(Y',[NT,1]);
-X0 = nan(NT,p);
-for k = 1:p; X0(:,k) = reshape(reshape(X(:,k), [T,N])', [NT,1]); end
-X = X0;
-M = sum(W,1); M(M==0) = 1; M = diag(M); p = 1;
-if tranform == 1; X = zscore(X); end
-if incint == 1; X = [ones(NT,1), X]; end
-if intonly == 1; X = ones(NT,1); end
+N = size(W,1);
+T = length(Y)/N; NT = N*T;
+M = sum(W,1); M(M==0) = 1; M = diag(M);
 J = 1; Q = NT*J;
 J0 = floor(log2(T));
 indj = repmat((1:NT)',[J,1]);
@@ -96,7 +107,7 @@ pis = 0.5 + zeros(p,J0+1);
 if simu == 1 % for simulation
     x.sigma2 = .49; x.tau2 = 4;  x.gamma = .9; V = M - W.*x.gamma; LV = chol(V,'lower'); LV = LV';
     x.phi = 0.8; Bmat = getBmat(x.phi, T, 'mat'); Bmat = Bmat.mat;
-    rng('default'); rng(nvar*10);
+    rng('default'); rng(ch*10);
     myD = x.tau2.*kron(inv(V), Bmat);
     x.u = reshape(mvnrnd(zeros(NT,1), myD),[T,N]);
     if simudata == 1
@@ -143,7 +154,7 @@ end
 
 CPUtime = toc; CPUtime = CPUtime/60;
 fprintf('\n%d iterations are done with elapsed time %.2f minutes.\n', B, CPUtime)
-nam = strcat('out_',num2str(nvar),'_',num2str(nmodel),'_',num2str(ch),'.mat');
+nam = strcat('out_',num2str(nmodel),'_',num2str(ch),'.mat');
 save(nam,'matPara','Us','Es','CPUtime')
 end
 
@@ -307,7 +318,7 @@ for i = 1:len
     if nonrandom ~= 1
         [x,delta,res] = updateTau2(x,LV,res); tau2bar = tau2bar + x.tau2;
         if nontemporal ~= 1; [x] = updatePhi(x, LV); phibar = phibar + x.phi;  end
-        if nonspatial ~= 1; x,V,LV] = updateGamma(x); gammabar = gammabar + x.gamma;  end
+        if nonspatial ~= 1; [x,V,LV] = updateGamma(x); gammabar = gammabar + x.gamma;  end
     end
 end
 betabar = betabar/len; sigma2bar = sigma2bar/len; tau2bar = tau2bar/len;
