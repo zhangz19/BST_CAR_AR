@@ -7,4 +7,4 @@ Bayesian Spatio-temporal model with separable CAR-AR covariance structure.
 
 * This function also evaluates DIC4 for mixed-effects model for comparison. This function can be used for functional regression using spike-and-slab prior for wavelet. It contains some useful util functions for AR and CAR model such as matrix inverse, determinant and Cholesky inverse by taking full computational advantage of AR and CAR covariance structure. 
 
-* Please contact the authors if there are any questions or implementation issues: Zhen Zhang, zhangz19@galton.uchicago.edu. Date coded: 2013-6-17
+* Please contact the authors if there are any questions or implementation issues: Zhen Zhang, zhangquake@gmail.com. Date coded: 2013-6-17
