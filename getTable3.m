@@ -2,9 +2,9 @@ function [] = getTable3()
 % for st
 datapath1 = './flow/'; %mat
 additive = 0;  % 0 = multiplicative
-for nvar = 3:3
+for nvar = 1:1 % column of your Y
     disp(nvar)
-    load('Ya.mat')
+    load('yourData.mat')  % X, Y, W
     Y = Y(:,nvar);
     X = X(:,[1,2,3,5,10:12,18]);
     X = [ones(size(X,1),1), zscore(X)];
