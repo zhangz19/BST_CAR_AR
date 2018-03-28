@@ -7,8 +7,8 @@ nams = {'Intercept', 'Total_Area', '%Urb', '%Forest', '%Ag', '%%A-soil', '%B-soi
         '%C-soil', 'precip(mm)', ...
     '\delta^2', '\tau^2', '\sigma^2', '\gamma', '\phi'};
 lambdas = [0.12581, 0.059438, -0.072563];
-for nvar = 3:3
-    load('Ya.mat')
+for nvar = 1:1  %Your Y could be multi-variate
+    load('yourData.mat')  % X, Y, W
     Y = Y(:,nvar); allY = Y;
     X = X(:,[1,2,3,5,10:12,18]);
     X = [ones(size(X,1),1), zscore(X)];
