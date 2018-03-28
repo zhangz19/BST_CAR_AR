@@ -100,7 +100,7 @@ nsample = (niter-burn)/thin;
 
 for ng = 1:J
     fprintf('group = %d\n', ng)
-    load('Ya.mat')
+    load('yourData.mat')  % X, Y, W
     Y = Y(:,ng); X = X(:,1:4);
     N = size(W,1); T = length(Y)/N; Y = reshape(Y, [T,N]);
     if betaprior == 2
